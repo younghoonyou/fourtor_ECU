@@ -1,8 +1,17 @@
 #ifndef __MCP2515_H
 #define	__MCP2515_H
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+
 #pragma anon_unions
+
 #include "stm32f4xx_hal.h"
+#include "stdbool.h"
+
+
 
 /* MCP2515 SPI Instruction Set */
 #define MCP2515_RESET           0xC0
@@ -208,7 +217,7 @@ typedef struct{
   uint8_t tempEID8;
   uint8_t tempEID0;
 }id_reg_t;
-typedef _Bool bool;
+//typedef _Bool bool;
 /* Functions */
 bool MCP2515_Initialize(void);
 bool MCP2515_SetConfigMode(void);
@@ -225,5 +234,9 @@ void MCP2515_RequestToSend(uint8_t instruction);
 uint8_t MCP2515_ReadStatus(void);
 uint8_t MCP2515_GetRxStatus(void);
 void MCP2515_BitModify(uint8_t address, uint8_t mask, uint8_t data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

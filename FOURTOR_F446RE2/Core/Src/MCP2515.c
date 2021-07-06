@@ -15,7 +15,7 @@ static void SPI_RxBuffer(uint8_t *buffer, uint8_t length);
 #define false 0
 #define true 1
 /* MCP2515 초기화 */
-bool MCP2515_Initialize(void)
+_Bool MCP2515_Initialize(void)
 {
   MCP2515_CS_HIGH();    
   

@@ -1,25 +1,25 @@
 #include "CANopen.h"
-
+#include "stdio.h"
 
 MCP_CAN CANopen::can_bus = MCP_CAN(CS_PIN_DEFAULT);
 uint8_t CANopen::can_msg_buffer[8] = {0};
 uint8_t CANopen::can_receive_buffer[8] = {0};
 uint16_t CANopen::canId = 0;
 
-
+#define millis() HAL_GetTick()
 
 void CANopen::setup() {
-  Serial.println(F("Can setting up"));
+  printf("Can setting up");
 
   uint8_t init_bool = 0;
   do {
     init_bool = can_bus.begin(CAN_125KBPS);
     if (init_bool==CAN_OK) {
-      Serial.print(F("CAN init ok!!\r\n"));
+      printf("CAN init ok!!\r\n");
     } else {
-      Serial.print(F("CAN init failed!!\r\n"));
+      printf("CAN init failed!!\r\n");
     }
-    delay(100);
+    HAL_Delay(100);
   } while (init_bool!=CAN_OK);
   // set masks to check all ID bits
    can_bus.init_Mask(0,0,0x0000); can_bus.init_Mask(1,0,0x0000);
@@ -28,8 +28,8 @@ void CANopen::setup() {
   // can_bus.init_Filt(1,0,0x7FF); can_bus.init_Filt(2,0,0x481);
   // can_bus.init_Filt(2,0,0x381); can_bus.init_Filt(3,0,0x7FF); // off
   // can_bus.init_Filt(4,0,0x7FF); can_bus.init_Filt(5,0,0x7FF);
-  delay(10);
-  Serial.println(F("Can setup complete"));
+  HAL_Delay(10);
+  printf("\nCan setup complete");
   return;
 }//setup
 
@@ -193,9 +193,9 @@ uint8_t CANopen::receiveCanMsg() {
   while (can_bus.checkReceive()==CANBUS_NEW_MSG) {
     can_bus.readMsgBuf(&length,can_receive_buffer);
 #ifdef DEBUG // read out all received messages
-    Serial.print(F("Id: "));Serial.println(canId,HEX);
-    Serial.print(F("data: ")); for(int i = 0; i<length; i++) {
-    Serial.print(can_receive_buffer[i],HEX); Serial.print(" "); }
+    printf("Id: ");printf("%x\n",canId);
+    printf("data: "); for(int i = 0; i<length; i++) {
+    printf("%x",can_receive_buffer[i]); printf(" "); }
 #endif
 
     // check the type bit, which kind of response it is
@@ -212,18 +212,18 @@ uint8_t CANopen::receiveCanMsg() {
         return SDO_RESPONSE_WRITE;
       case SDO_ERROR_CODE: // fall through error
       case SDO_ERROR_CODE+DEFAULT_NODE_ID:
-        Serial.println(F("\nERROR"));
-        Serial.print(F("Error Message is: "));
+        printf("\nERROR\n");
+        printf("Error Message is: ");
         for (uint8_t i=0; i<length; i++) {
-          Serial.print(can_receive_buffer[i],HEX);
+          printf("%x",can_receive_buffer[i]);
         }
         break;
       case 0:
         // TODO if PDO message: ACT!,
-        Serial.println(F("\nPDO Msg received"));
-        Serial.print(F("Message is: "));
+        printf("\nPDO Msg received\n");
+        printf("Message is: ");
         for (uint8_t i=0; i<length; i++) {
-          Serial.print(can_receive_buffer[i],HEX);
+          printf("%x",can_receive_buffer[i]);
         }
         break; // maybe another msg is waiting
       default:
@@ -244,9 +244,9 @@ uint8_t CANopen::readCanBus() {
   canId = can_bus.getCanId();
   while (can_bus.checkReceive()==CANBUS_NEW_MSG) {
     can_bus.readMsgBuf(&length,can_receive_buffer);
-    Serial.print(F("Id: "));Serial.println(canId,HEX);
-    Serial.print(F("data: ")); for(int i = 0; i<length; i++) {
-      Serial.print(can_receive_buffer[i],HEX); Serial.print(" "); }
+    printf("Id: ");printf("%x\n",canId);
+    printf("data: "); for(int i = 0; i<length; i++) {
+    printf("%x",can_receive_buffer[i]); printf(" "); }
   }
   return SUCCESS;
 }
@@ -258,7 +258,7 @@ uint8_t CANopen::startOperational(uint8_t id/*=DEFAULT_NODE_ID*/) {
   can_msg_buffer[1] = id;
   sendCanBuffer(0x0000,2);
   while (readCanBus()!=SUCCESS)
-  {Serial.println(F("waiting startOperational"));};
+  {printf("\n waiting startOperational");};
   return SUCCESS;
 }
 
@@ -269,7 +269,7 @@ uint8_t CANopen::resetNode(uint8_t id/*=DEFAULT_NODE_ID*/) {
   can_msg_buffer[1] = id;
   sendCanBuffer(0x0000,2);
   while (readCanBus()!=SUCCESS)
-  {Serial.println(F("waiting resetNode"));};
+  {printf("\n waiting resetNode");};
   return SUCCESS;
 }
 
@@ -279,7 +279,7 @@ uint8_t CANopen::sendSyncMsg(uint8_t id/*=DEFAULT_NODE_ID*/) {
   can_msg_buffer[1] = id;
   sendCanBuffer(0x0000,2);
   while (readCanBus()!=SUCCESS)
-  {Serial.println(F("waiting sendSyncMsg"));};
+  {printf("\n waiting sendSyncMsg");};
   return SUCCESS;
 }
 

@@ -1,6 +1,12 @@
 #ifndef __CAN_SPI_H
 #define	__CAN_SPI_H
 
+#include "stdbool.h"
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 #include "stm32f4xx_hal.h"
 
 typedef union {
@@ -22,7 +28,11 @@ typedef union {
 
 #define dSTANDARD_CAN_MSG_ID_2_0B 1
 #define dEXTENDED_CAN_MSG_ID_2_0B 2
-typedef _Bool bool;
+
+
+//typedef enum(FALSE = 0,TRUE = 1) bool;
+
+//typedef _Bool bool;
 bool CANSPI_Initialize(void);
 void CANSPI_Sleep(void);
 uint8_t CANSPI_Transmit(uCAN_MSG *tempCanMsg);
@@ -31,5 +41,9 @@ uint8_t CANSPI_messagesInBuffer(void);
 uint8_t CANSPI_isBussOff(void);
 uint8_t CANSPI_isRxErrorPassive(void);
 uint8_t CANSPI_isTxErrorPassive(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* __CAN_SPI_H */

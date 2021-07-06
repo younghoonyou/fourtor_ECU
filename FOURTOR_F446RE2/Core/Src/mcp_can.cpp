@@ -21,8 +21,14 @@
   1301  USA
 */
 #include "mcp_can.h"
+#include "stdio.h"
+#include "spi.h"
 
-#define spi_readwrite SPI.transfer
+uint8_t spi_tx[1];
+uint8_t spi_rx[1];
+
+#define spi_readwrite HAL_SPI_TransmitReceive(&hspi2,spi_tx,spi_rx,1,100); //위에꺼 써줘야 한다
+//#define spi_readwrite SPI.transfer
 #define spi_read() spi_readwrite(0x00)
 
 /*********************************************************************************************************
@@ -332,14 +338,14 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
 #if DEBUG_MODE
       Serial.print("set rate fall!!\r\n");
 #else
-      delay(10);
+      HAL_Delay(10);
 #endif
       return res;
     }
 #if DEBUG_MODE
     Serial.print("set rate success!!\r\n");
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
 
     if ( res == MCP2515_OK ) {
@@ -378,7 +384,7 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
 #if DEBUG_MODE        
           Serial.print("Enter Normal Mode Fall!!\r\n");
 #else
-            delay(10);
+            HAL_Delay(10);
 #endif           
           return res;
         }
@@ -387,7 +393,7 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
 #if DEBUG_MODE
           Serial.print("Enter Normal Mode Success!!\r\n");
 #else
-            delay(10);
+            HAL_Delay(10);
 #endif
 
     }
@@ -536,7 +542,7 @@ INT8U MCP_CAN::mcp2515_getNextFreeTXBuf(INT8U *txbuf_n)                 /* get N
 MCP_CAN::MCP_CAN(INT8U _CS)
 {
     SPICS = _CS;
-    pinMode(SPICS, OUTPUT);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_SET);
     MCP2515_UNSELECT();
 }
 
@@ -548,7 +554,8 @@ INT8U MCP_CAN::begin(INT8U speedset)
 {
     INT8U res;
 
-    SPI.begin();
+    HAL_SPI_Init(&hspi2);
+//    SPI.begin();
     res = mcp2515_init(speedset);
     if (res == MCP2515_OK) return CAN_OK;
     else return CAN_FAILINIT;
@@ -571,7 +578,7 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
 #if DEBUG_MODE
     Serial.print("Enter setting mode fall\r\n"); 
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
     return res;
     }
@@ -590,14 +597,14 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
 #if DEBUG_MODE
     Serial.print("Enter normal mode fall\r\n"); 
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
     return res;
   }
 #if DEBUG_MODE
-    Serial.print("set Mask success!!\r\n");
+    printf("set Mask success!!\r\n");
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
     return res;
 }
@@ -612,7 +619,7 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT8U ext, INT32U ulData)
 #if DEBUG_MODE
     Serial.print("Begin to set Filter!!\r\n");
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
     res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
     if(res > 0)
@@ -620,7 +627,7 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT8U ext, INT32U ulData)
 #if DEBUG_MODE
       Serial.print("Enter setting mode fall\r\n"); 
 #else
-      delay(10);
+      HAL_Delay(10);
 #endif
       return res;
     }
@@ -659,16 +666,16 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT8U ext, INT32U ulData)
     if(res > 0)
     {
 #if DEBUG_MODE
-      Serial.print("Enter normal mode fall\r\nSet filter fail!!\r\n"); 
+      printf("Enter normal mode fall\r\nSet filter fail!!\r\n");
 #else
-      delay(10);
+      HAL_Delay(10);
 #endif
       return res;
     }
 #if DEBUG_MODE
-    Serial.print("set Filter success!!\r\n");
+    printf("set Filter success!!\r\n");
 #else
-    delay(10);
+    HAL_Delay(10);
 #endif
     
     return res;
