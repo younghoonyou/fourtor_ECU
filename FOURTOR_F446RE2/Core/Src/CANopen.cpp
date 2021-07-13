@@ -182,12 +182,12 @@ uint8_t CANopen::composeMsg(\
 
 uint8_t CANopen::receiveCanMsg() {
   // wait for message
-  uint32_t startTime = millis();
-  while(can_bus.checkReceive()!=CANBUS_NEW_MSG){
-    if ((millis()-startTime)>CAN_RECEIVE_TIMEOUT_MS) {
-      return FAILURE; // timed out
-    }
-  }
+//  uint32_t startTime = millis();
+//  while(can_bus.checkReceive()!=CANBUS_NEW_MSG){
+//    if ((millis()-startTime)>CAN_RECEIVE_TIMEOUT_MS) {
+//      return FAILURE; // timed out
+//    }
+//  }
   uint8_t length;
   canId = can_bus.getCanId();
   while (can_bus.checkReceive()==CANBUS_NEW_MSG) {
@@ -234,12 +234,12 @@ uint8_t CANopen::receiveCanMsg() {
 
 uint8_t CANopen::readCanBus() {
   // wait for message
-  uint32_t startTime = millis();
-  while(can_bus.checkReceive()!=CANBUS_NEW_MSG){
-    if ((millis()-startTime)>CAN_RECEIVE_TIMEOUT_MS) {
-      return FAILURE; // timed out
-    }
-  }
+//  uint32_t startTime = millis();
+//  while(can_bus.checkReceive()!=CANBUS_NEW_MSG){
+//    if ((millis()-startTime)>CAN_RECEIVE_TIMEOUT_MS) {
+//      return FAILURE; // timed out
+//    }
+//  }
   uint8_t length;
   canId = can_bus.getCanId();
   while (can_bus.checkReceive()==CANBUS_NEW_MSG) {

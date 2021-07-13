@@ -17,7 +17,7 @@
 #define CANBUS_NO_MSG 4
 #define CANBUS_NEW_MSG 3
 #define EXT 0
-#define CS_PIN_DEFAULT 10
+#define CS_PIN_DEFAULT GPIO_PIN_12
 #define CS_PIN_SOLDER_BRIDGE 9
 #define SUCCESS 1
 #define FAILURE 0

@@ -1,0 +1,6 @@
+CANopen.h:51:3:CANopen::CANopen()	16	static
+main.cpp:84:5:int main()	16	static
+main.cpp:193:6:void SystemClock_Config()	88	static
+main.cpp:242:6:void Error_Handler()	4	static
+main.cpp:248:1:void __static_initialization_and_destruction_0(int, int)	16	static
+main.cpp:248:1:cpp)	8	static

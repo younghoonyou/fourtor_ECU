@@ -26,24 +26,34 @@
 #include "gpio.h"
 #include "stdio.h"
 #include "stm32f4xx_hal.h"
+//#include "mcp_can.h"
+//#include "CANopen.h"
+#include "stdio.h"
+#include "string.h"
 #include "CANSPI.h"
-#include "mcp_can.h"
-#include "CANopen.h"
-
-
+#include "MCP2515.h"
+#include <stdlib.h>
 #define Slave1 0x0F6
 #define Slave2 0x036
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-CAN_FilterTypeDef sFilterConfig;
-CAN_RxHeaderTypeDef RxHeader;
-SPI_HandleTypeDef hspi2;
-//CanTxMsg msg;
-//uint8_t RxData[8];
-//uint8_t TxData[8];
-//volatile uint8_t Flag_Rx = 0;
+UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart2;
+//MCP_CAN can_bus(12);
+//CANopen motor;
+uint16_t rpm;
+uint8_t len = 0;
+uint32_t canId = 0;
+uint32_t timestamp = 0;
+uint8_t buf[20];
+uint8_t i=0;
 uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
+//char *rx;
+rx_reg_t rxReg;
+int a;
+float b;
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,7 +80,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
-
+uint8_t init_bool = 0;
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -82,12 +92,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-
-//	uint8_t init_bool = 0;
-//	init_bool = can_bus.begin(CAN_250KBPS);
-
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -112,74 +117,69 @@ int main(void)
   MX_I2C1_Init();
   MX_CAN1_Init();
   MX_SPI2_Init();
+//  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-//  bno055_assignI2C(&hi2c1); //i2c_1?�� ?��?��?�� 2�???? 바꾸?��?��?�� ?��?��?��?�� ?��?��브러�???? ?��?�� I2C_HandleTypeDef hi2c2 good!
-//  bno055_setup();
-//  bno055_setOperationMode(BNO055_OPERATION_MODE_ACCGYRO);//?��?�� 모드
-//  bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//?��?�� 모드
-
-//  	RxHeader.DLC = 8;				//Data length
-//  	RxHeader.IDE = CAN_ID_STD;		// Extended frame mode
-//  	RxHeader.RTR = CAN_RTR_DATA;	//Data Frame
-//  	RxHeader.StdId = 0xF6;			// Replace zero when using extended frames
-
-//  	sFilterConfig.FilterActivation = CAN_FILTER_ENABLE;	// Filter enable
-//  	sFilterConfig.FilterBank = 0;						// Filter 0
-//  	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;// Specify the FIFO (0 or 1U) that will be assigned to the filter.
-//  	sFilterConfig.FilterIdHigh = 0x0000;	// ID 16 digits
-//  	sFilterConfig.FilterIdLow = 0x0000;	// ID of 16 bits, only receive extended frame mode, data frame
-//  	sFilterConfig.FilterMaskIdHigh = 0x0000;// Filter mask High Low Byte Data is 1 Time Table must match the ID, 0xffffffFFF represents receiving screening must pass the same
-//  	sFilterConfig.FilterMaskIdLow = 0x0000;
-//  	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;// Mask mode
-//  	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;// 32
-//  	sFilterConfig.SlaveStartFilterBank = 0;
-//
-//
-//  	HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
-//   	HAL_CAN_ActivateNotification(&hcan1,CAN_IT_RX_FIFO0_MSG_PENDING);// Activate CAN_IT_RX_FIFO0_MSG_PENDING Interrupt
-//   	HAL_CAN_Start(&hcan1);
+//  uint8_t init_bool = 0;
+//  can_bus.mcp2515_initCANBuffers;
   CANSPI_Initialize();
   /* USER CODE END 2 */
-
+//  do {
+//      init_bool = can_bus.begin(CAN_250KBPS);
+//      if (init_bool==CAN_OK) {
+//        printf("CAN init ok!!\r\n");
+//      } else {
+//        printf("CAN init failed!!\r\n");
+//      }
+//      HAL_Delay(100);
+//    } while (init_bool!=CAN_OK);
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+  /* USER CODE BEGIN WHILE */
+//	  can_bus.readMsgBuf(&len, buf); // read data, len: data length, buf: data buf
+//	  canId = can_bus.getCanId();
+	  txMessage.frame.id=0x80;//0x81
+	  txMessage.frame.idType=0x00;
+	  txMessage.frame.dlc=8;
+	  txMessage.frame.data0=0x00;
+	  txMessage.frame.data1=0x00;
+	  txMessage.frame.data2=0x00;
+	  txMessage.frame.data3=0x00;
+	  txMessage.frame.data4=0x00;
+	  txMessage.frame.data5=0x00;
+	  txMessage.frame.data6=0x00;
+	  txMessage.frame.data7=0x00;
+	  CANSPI_Transmit(&txMessage);
+	  HAL_Delay(100);
 	  if(CANSPI_Receive(&rxMessage))
-	 	      {
+	  {
+		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
+		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
+		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
+		  uint16_t current_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
 
-		  if(Slave1 == rxMessage.frame.id)
-		  {
-			  printf("The message id is 0x0F6 \r\n");
-			  printf("ID:0x%2x DLC:%d \r\n",rxMessage.frame.id,rxMessage.frame.dlc);
-			  printf("0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x \r\n",rxMessage.frame.data0,rxMessage.frame.data1,rxMessage.frame.data2,rxMessage.frame.data3,rxMessage.frame.data4,rxMessage.frame.data5,rxMessage.frame.data6,rxMessage.frame.data7);
-		  }
-		  else if(Slave2 == rxMessage.frame.id)
-		  {
-			  printf("The message id is 0x036 \r\n");
-			  printf("ID:0x%2x DLC:%d \r\n",rxMessage.frame.id,rxMessage.frame.dlc);
-			  printf("0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x \r\n",rxMessage.frame.data0,rxMessage.frame.data1,rxMessage.frame.data2,rxMessage.frame.data3,rxMessage.frame.data4,rxMessage.frame.data5,rxMessage.frame.data6,rxMessage.frame.data7);
+//		  for(int i=0;i;i++){
+//		  printf("%x",rxMessage.array[i]);
+//		  printf("\r\n");
+//		  HAL_Delay(1000);
+//		  printf("ID:0x%08x DLC:%d \r\n",rxMessage.frame.id,rxMessage.frame.dlc);
+//		  printf("%2x %2x %2x %2x %2x %2x %2x %2x \r\n",rxMessage.frame.data0,rxMessage.frame.data1,rxMessage.frame.data2,rxMessage.frame.data3,rxMessage.frame.data4,rxMessage.frame.data5,rxMessage.frame.data6,rxMessage.frame.data7);
+		  printf("Temp:%d ",temp_buff);
+		  printf("Current:%d ",current_buff);
+		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
+		  printf("Torque:%.2f \r\n",(torque_buff)*0.1);
 
-		  }
-		  printf("\n");
+//
+		 	 		  HAL_Delay(100);
+	  }
+    /* USER CODE END WHILE */
+//	  motor.read16bit(0x1803, 0x00, &rpm, DEFAULT_NODE_ID);
 
-	 //	        txMessage.frame.idType = rxMessage.frame.idType;
-	 //	        txMessage.frame.id = rxMessage.frame.id;
-	 //	        txMessage.frame.dlc = rxMessage.frame.dlc;
-	 //	        txMessage.frame.data0++;
-	 //	        txMessage.frame.data1 = rxMessage.frame.data1;
-	 //	        txMessage.frame.data2 = rxMessage.frame.data2;
-	 //	        txMessage.frame.data3 = rxMessage.frame.data3;
-	 //	        txMessage.frame.data4 = rxMessage.frame.data4;
-	 //	        txMessage.frame.data5 = rxMessage.frame.data5;
-	 //	        txMessage.frame.data6 = rxMessage.frame.data6;
-	 //	        txMessage.frame.data7 = rxMessage.frame.data7;
-	 //	        CANSPI_Transmit(&txMessage);
-//	 		  printf("ID:0x%2x DLC:%d \r\n",rxMessage.frame.id,rxMessage.frame.dlc);
-//	 		  printf("0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x 0x%2x \r\n",rxMessage.frame.data0,rxMessage.frame.data1,rxMessage.frame.data2,rxMessage.frame.data3,rxMessage.frame.data4,rxMessage.frame.data5,rxMessage.frame.data6,rxMessage.frame.data7);
-	 		  HAL_Delay(1000);
-	 	      }
+//	  HAL_UART_Receive(&huart4,(uint8_t *)rx,sizeof(rx),100);
+//	  printf("%d ",rx);
+//	  HAL_Delay(500);
+//
+//	  printf("\r\n");
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

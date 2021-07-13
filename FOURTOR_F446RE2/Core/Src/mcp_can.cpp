@@ -23,24 +23,26 @@
 #include "mcp_can.h"
 #include "stdio.h"
 #include "spi.h"
+#include "stm32f4xx_hal.h"
 
-uint8_t spi_tx[1];
-uint8_t spi_rx[1];
+#define SPI_CAN                 &hspi2
+#define SPI_TIMEOUT             10
 
-#define spi_readwrite HAL_SPI_TransmitReceive(&hspi2,spi_tx,spi_rx,1,100); //위에꺼 써줘야 한다
-//#define spi_readwrite SPI.transfer
-#define spi_read() spi_readwrite(0x00)
-
+static void SPI_Tx(uint8_t data);
+static void SPI_TxBuffer(uint8_t *buffer, uint8_t length);
+static uint8_t SPI_Rx(void);
+static void SPI_RxBuffer(uint8_t *buffer, uint8_t length);
+SPI_HandleTypeDef hspi2;
+//setRegisterS    readRegisterS  	revise
 /*********************************************************************************************************
 ** Function name:           mcp2515_reset
 ** Descriptions:            reset the device
 *********************************************************************************************************/
 void MCP_CAN::mcp2515_reset(void)
 {
-    MCP2515_SELECT();
-    spi_readwrite(MCP_RESET);
-    MCP2515_UNSELECT();
-    HAL_Delay(10);
+	MCP2515_SELECT();
+	SPI_Tx(MCP_RESET);
+	MCP2515_UNSELECT();
 }
 
 /*********************************************************************************************************
@@ -52,9 +54,9 @@ INT8U MCP_CAN::mcp2515_readRegister(const INT8U address)
     INT8U ret;
 
     MCP2515_SELECT();
-    spi_readwrite(MCP_READ);
-    spi_readwrite(address);
-    ret = spi_read();
+    SPI_Tx(MCP_READ);
+    SPI_Tx(address);
+    ret = SPI_Rx();
     MCP2515_UNSELECT();
 
     return ret;
@@ -68,12 +70,13 @@ void MCP_CAN::mcp2515_readRegisterS(const INT8U address, INT8U values[], const I
 {
 	INT8U i;
 	MCP2515_SELECT();
-	spi_readwrite(MCP_READ);
-	spi_readwrite(address);
+	SPI_Tx(MCP_READ);
+	SPI_Tx(address);
 	// mcp2515 has auto-increment of address-pointer
 	for (i=0; i<n && i<CAN_MAX_CHAR_IN_MESSAGE; i++) {
-		values[i] = spi_read();
+		values[i] = SPI_Rx();
 	}
+	//SPI_RxBuffer(values, n);
 	MCP2515_UNSELECT();
 }
 
@@ -84,9 +87,9 @@ void MCP_CAN::mcp2515_readRegisterS(const INT8U address, INT8U values[], const I
 void MCP_CAN::mcp2515_setRegister(const INT8U address, const INT8U value)
 {
     MCP2515_SELECT();
-    spi_readwrite(MCP_WRITE);
-    spi_readwrite(address);
-    spi_readwrite(value);
+    SPI_Tx(MCP_WRITE);
+    SPI_Tx(address);
+    SPI_Tx(value);
     MCP2515_UNSELECT();
 }
 
@@ -98,12 +101,12 @@ void MCP_CAN::mcp2515_setRegisterS(const INT8U address, const INT8U values[], co
 {
     INT8U i;
     MCP2515_SELECT();
-    spi_readwrite(MCP_WRITE);
-    spi_readwrite(address);
+    SPI_Tx(MCP_WRITE);
+    SPI_Tx(address);
        
     for (i=0; i<n; i++) 
     {
-        spi_readwrite(values[i]);
+    	SPI_Tx(values[i]);
     }
     MCP2515_UNSELECT();
 }
@@ -115,10 +118,10 @@ void MCP_CAN::mcp2515_setRegisterS(const INT8U address, const INT8U values[], co
 void MCP_CAN::mcp2515_modifyRegister(const INT8U address, const INT8U mask, const INT8U data)
 {
     MCP2515_SELECT();
-    spi_readwrite(MCP_BITMOD);
-    spi_readwrite(address);
-    spi_readwrite(mask);
-    spi_readwrite(data);
+    SPI_Tx(MCP_BITMOD);
+    SPI_Tx(address);
+    SPI_Tx(mask);
+    SPI_Tx(data);
     MCP2515_UNSELECT();
 }
 
@@ -130,8 +133,8 @@ INT8U MCP_CAN::mcp2515_readStatus(void)
 {
 	INT8U i;
 	MCP2515_SELECT();
-	spi_readwrite(MCP_READ_STATUS);
-	i = spi_read();
+	SPI_Tx(MCP_READ_STATUS);
+	i = SPI_Rx();
 	MCP2515_UNSELECT();
 	
 	return i;
@@ -230,9 +233,9 @@ INT8U MCP_CAN::mcp2515_configRate(const INT8U canSpeed)
         break;
 
         case (CAN_250KBPS):
-        cfg1 = MCP_16MHz_250kBPS_CFG1;
-        cfg2 = MCP_16MHz_250kBPS_CFG2;
-        cfg3 = MCP_16MHz_250kBPS_CFG3;
+        cfg1 = 0x01;
+        cfg2 = 0xFE;
+        cfg3 = 0x82;
         break;
 
         case (CAN_500KBPS):
@@ -276,16 +279,16 @@ void MCP_CAN::mcp2515_initCANBuffers(void)
     INT32U ulMask = 0x00, ulFilt = 0x00;
 
 
-    //mcp2515_write_id(MCP_RXM0SIDH, ext, ulMask);			/*Set both masks to 0           */
-    //mcp2515_write_id(MCP_RXM1SIDH, ext, ulMask);			/*Mask register ignores ext bit */
+    mcp2515_write_id(MCP_RXM0SIDH, ext, ulMask);			/*Set both masks to 0           */
+    mcp2515_write_id(MCP_RXM1SIDH, ext, ulMask);			/*Mask register ignores ext bit */
     
                                                             /* Set all filters to 0         */
-    //mcp2515_write_id(MCP_RXF0SIDH, ext, ulFilt);			/* RXB0: extended               */
-    //mcp2515_write_id(MCP_RXF1SIDH, std, ulFilt);			/* RXB1: standard               */
-    //mcp2515_write_id(MCP_RXF2SIDH, ext, ulFilt);			/* RXB2: extended               */
-    //mcp2515_write_id(MCP_RXF3SIDH, std, ulFilt);			/* RXB3: standard               */
-    //mcp2515_write_id(MCP_RXF4SIDH, ext, ulFilt);
-    //mcp2515_write_id(MCP_RXF5SIDH, std, ulFilt);
+    mcp2515_write_id(MCP_RXF0SIDH, ext, ulFilt);			/* RXB0: extended               */
+    mcp2515_write_id(MCP_RXF1SIDH, std, ulFilt);			/* RXB1: standard               */
+    mcp2515_write_id(MCP_RXF2SIDH, ext, ulFilt);			/* RXB2: extended               */
+    mcp2515_write_id(MCP_RXF3SIDH, std, ulFilt);			/* RXB3: standard               */
+    mcp2515_write_id(MCP_RXF4SIDH, ext, ulFilt);
+    mcp2515_write_id(MCP_RXF5SIDH, std, ulFilt);
 
                                                                         /* Clear, deactivate the three  */
                                                                         /* transmit buffers             */
@@ -320,14 +323,14 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
     if(res > 0)
     {
 #if DEBUG_MODE
-      Serial.print("Enter setting mode fall\r\n"); 
+      printf("Enter setting mode fall\r\n");
 #else
       HAL_Delay(10);
 #endif
       return res;
     }
 #if DEBUG_MODE
-    Serial.print("Enter setting mode success \r\n");
+    printf("Enter setting mode success \r\n");
 #else
     HAL_Delay(10);
 #endif
@@ -336,14 +339,14 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
     if(mcp2515_configRate(canSpeed))
     {
 #if DEBUG_MODE
-      Serial.print("set rate fall!!\r\n");
+      printf("set rate fall!!\r\n");
 #else
       HAL_Delay(10);
 #endif
       return res;
     }
 #if DEBUG_MODE
-    Serial.print("set rate success!!\r\n");
+    printf("set rate success!!\r\n");
 #else
     HAL_Delay(10);
 #endif
@@ -382,7 +385,7 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
         if(res)
         {
 #if DEBUG_MODE        
-          Serial.print("Enter Normal Mode Fall!!\r\n");
+          printf("Enter Normal Mode Fall!!\r\n");
 #else
             HAL_Delay(10);
 #endif           
@@ -391,7 +394,7 @@ INT8U MCP_CAN::mcp2515_init(const INT8U canSpeed)                       /* mcp25
 
 
 #if DEBUG_MODE
-          Serial.print("Enter Normal Mode Success!!\r\n");
+          printf("Enter Normal Mode Success!!\r\n");
 #else
             HAL_Delay(10);
 #endif
@@ -541,8 +544,14 @@ INT8U MCP_CAN::mcp2515_getNextFreeTXBuf(INT8U *txbuf_n)                 /* get N
 *********************************************************************************************************/
 MCP_CAN::MCP_CAN(INT8U _CS)
 {
-    SPICS = _CS;
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_SET);
+	_CS=12;
+    SPICS = GPIO_PIN_12;
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+//    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_SET);
     MCP2515_UNSELECT();
 }
 
@@ -569,14 +578,14 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
 {
     INT8U res = MCP2515_OK;
 #if DEBUG_MODE
-    Serial.print("Begin to set Mask!!\r\n");
+    printf("Begin to set Mask!!\r\n");
 #else
     HAL_Delay(10);
 #endif
     res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
     if(res > 0){
 #if DEBUG_MODE
-    Serial.print("Enter setting mode fall\r\n"); 
+    printf("Enter setting mode fall\r\n");
 #else
     HAL_Delay(10);
 #endif
@@ -595,7 +604,7 @@ INT8U MCP_CAN::init_Mask(INT8U num, INT8U ext, INT32U ulData)
     res = mcp2515_setCANCTRL_Mode(MODE_NORMAL);
     if(res > 0){
 #if DEBUG_MODE
-    Serial.print("Enter normal mode fall\r\n"); 
+    printf("Enter normal mode fall\r\n");
 #else
     HAL_Delay(10);
 #endif
@@ -617,7 +626,7 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT8U ext, INT32U ulData)
 {
     INT8U res = MCP2515_OK;
 #if DEBUG_MODE
-    Serial.print("Begin to set Filter!!\r\n");
+    printf("Begin to set Filter!!\r\n");
 #else
     HAL_Delay(10);
 #endif
@@ -625,7 +634,7 @@ INT8U MCP_CAN::init_Filt(INT8U num, INT8U ext, INT32U ulData)
     if(res > 0)
     {
 #if DEBUG_MODE
-      Serial.print("Enter setting mode fall\r\n"); 
+      printf("Enter setting mode fall\r\n");
 #else
       HAL_Delay(10);
 #endif
@@ -914,6 +923,33 @@ INT8U MCP_CAN::isRemoteRequest(void)
 {
     return m_nRtr;
 } 
+
+
+
+static void SPI_Tx(uint8_t data)
+{
+  HAL_SPI_Transmit(SPI_CAN, &data, 1, SPI_TIMEOUT);
+}
+
+/* SPI Tx Wrapper 함수 */
+static void SPI_TxBuffer(uint8_t *buffer, uint8_t length)
+{
+  HAL_SPI_Transmit(SPI_CAN, buffer, length, SPI_TIMEOUT);
+}
+
+/* SPI Rx Wrapper 함수 */
+static uint8_t SPI_Rx(void)
+{
+  uint8_t retVal;
+  HAL_SPI_Receive(SPI_CAN, &retVal, 1, SPI_TIMEOUT);
+  return retVal;
+}
+
+/* SPI Rx Wrapper 함수 */
+static void SPI_RxBuffer(uint8_t *buffer, uint8_t length)
+{
+  HAL_SPI_Receive(SPI_CAN, buffer, length, SPI_TIMEOUT);
+}
 /*********************************************************************************************************
   END FILE
 *********************************************************************************************************/

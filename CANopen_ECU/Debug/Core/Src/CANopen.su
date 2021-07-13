@@ -1,0 +1,17 @@
+CANopen.cpp:11:6:void CANopen::setup()	24	static
+CANopen.cpp:37:9:uint8_t CANopen::read(uint16_t, uint8_t, uint32_t*, uint16_t)	32	static
+CANopen.cpp:65:9:uint8_t CANopen::read8bit(uint16_t, uint8_t, uint8_t*, uint16_t)	24	static
+CANopen.cpp:78:9:uint8_t CANopen::read16bit(uint16_t, uint8_t, uint16_t*, uint16_t)	32	static
+CANopen.cpp:93:9:uint8_t CANopen::read32bit(uint16_t, uint8_t, uint32_t*, uint16_t)	32	static
+CANopen.cpp:111:9:uint8_t CANopen::write8bit(uint16_t, uint8_t, uint8_t, uint16_t)	16	static
+CANopen.cpp:127:9:uint8_t CANopen::write16bit(uint16_t, uint8_t, uint16_t, uint16_t)	32	static
+CANopen.cpp:145:9:uint8_t CANopen::write32bit(uint16_t, uint8_t, uint32_t, uint16_t)	32	static
+CANopen.cpp:166:9:uint8_t CANopen::sendCanBuffer(uint16_t, uint8_t)	24	static
+CANopen.cpp:172:9:uint8_t CANopen::composeMsg(uint8_t, uint16_t, uint8_t)	24	static
+CANopen.cpp:183:9:uint8_t CANopen::receiveCanMsg()	32	static
+CANopen.cpp:235:9:uint8_t CANopen::readCanBus()	32	static
+CANopen.cpp:255:9:uint8_t CANopen::startOperational(uint8_t)	16	static
+CANopen.cpp:266:9:uint8_t CANopen::resetNode(uint8_t)	16	static
+CANopen.cpp:276:9:uint8_t CANopen::sendSyncMsg(uint8_t)	16	static
+CANopen.cpp:284:1:void __static_initialization_and_destruction_0(int, int)	16	static
+CANopen.cpp:284:1:cpp)	8	static
