@@ -26,19 +26,21 @@
 #include "gpio.h"
 #include "stdio.h"
 #include "stm32f4xx_hal.h"
-//#include "mcp_can.h"
-//#include "CANopen.h"
 #include "stdio.h"
+#include "bno055.h"
+#include "bno055_stm32.h"
 #include "string.h"
 #include "CANSPI.h"
 #include "MCP2515.h"
 #include <stdlib.h>
-#define Slave1 0x0F6
-#define Slave2 0x036
+#include "i2c-lcd.h"
+#include "stm32_tm1637.h"
+#define SLAVE_ADDRESS_LCD 0x27
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
+I2C_HandleTypeDef hi2c3;
 //MCP_CAN can_bus(12);
 //CANopen motor;
 uint16_t rpm;
@@ -47,12 +49,17 @@ uint32_t canId = 0;
 uint32_t timestamp = 0;
 uint8_t buf[20];
 uint8_t i=0;
+int row=0;
+int col=0;
 uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
-//char *rx;
+char s[10];
 rx_reg_t rxReg;
-int a;
-float b;
+int a=0;
+int b=0;
+//int c=0;
+//int a;
+//float b;
 
 /* USER CODE END Includes */
 
@@ -90,11 +97,16 @@ uint8_t init_bool = 0;
   * @brief  The application entry point.
   * @retval int
   */
+
 int main(void)
 {
+//	uint8_t a[30];
+//	int size;
+//	int* arr = (int*)malloc(sizeof(int) * size);
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
-
+	uint8_t buffer[100];
+	int str=1000;
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -114,81 +126,170 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();
+  MX_I2C1_Init();//BNO055
   MX_CAN1_Init();
-  MX_SPI2_Init();
-//  MX_UART4_Init();
+  MX_SPI2_Init();//Motor data logging
+  MX_UART4_Init();//BMS data logging
+  MX_UART5_Init();//7-Segment
+  MX_I2C3_Init();//LCD print
   /* USER CODE BEGIN 2 */
-//  uint8_t init_bool = 0;
-//  can_bus.mcp2515_initCANBuffers;
+
   CANSPI_Initialize();
   /* USER CODE END 2 */
-//  do {
-//      init_bool = can_bus.begin(CAN_250KBPS);
-//      if (init_bool==CAN_OK) {
-//        printf("CAN init ok!!\r\n");
-//      } else {
-//        printf("CAN init failed!!\r\n");
-//      }
-//      HAL_Delay(100);
-//    } while (init_bool!=CAN_OK);
+
   /* Infinite loop */
+  lcd_init();
+  HAL_Delay(20);
+  lcd_clear();
+//  HAL_Delay(20);
+//  lcd_put_cur(0,0);
+//  HAL_Delay(20);
+//  lcd_send_string((char*)"M.Tq:");
+//  HAL_Delay(20);
+//  lcd_put_cur(1,0);
+//  HAL_Delay(20);
+//  lcd_send_string((char*)"M.Tq:");
+
+
+//  for(int i=0;i<100;i++){
+//	  HAL_Delay(100);
+//	  lcd_put_cur(1,5);
+//	  sprintf((char*)buffer,"%d",i);
+//	  lcd_send_string((char*)buffer);
+//  }
+//  bno055_assignI2C(&hi2c2); //i2c_1이 안되서 2로 바꾸었더니 잘되었다 라이브러리 선언 I2C_HandleTypeDef hi2c2
+//  bno055_setup();
+//  bno055_setOperationMode(BNO055_OPERATION_MODE_ACCGYRO);//작동 모드
+//  bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//파워 모드
+//  lcd_init();
+//  HAL_Delay(30);
+//  lcd_clear();
+//  HAL_Delay(30);
+//  lcd_send_string("B.Temp:");
+//tm1637Init();
+//tm1637SetBrightness(5);
+//for(int i=0;i<1000;i++){
+//tm1637DisplayDecimal(str-i, 1);
+//}
   while (1)
   {
+
+//	  bno055_vector_t gyro = bno055_getVectorGyroscope();// gyro라는 벡터에 각각 x,y,z값의 자이로값
+//	  bno055_vector_t acc = bno055_getVectorAccelerometer();//acc라는 벡터에 각각 x,y,z값의 가속도
+//	  printf("X_gyro: %.2f Y_gyro: %.2f Z_gyro: %.2f\r\n",gyro.x,gyro.y,gyro.z);
+//	  printf("X_acc: %.2f Y_acc: %.2f Z_acc: %.2f\r\n",acc.x,acc.y,acc.z);
+//	  HAL_Delay(1000);
   /* USER CODE BEGIN WHILE */
-//	  can_bus.readMsgBuf(&len, buf); // read data, len: data length, buf: data buf
-//	  canId = can_bus.getCanId();
-	  txMessage.frame.id=0x80;//0x81
-	  txMessage.frame.idType=0x00;
-	  txMessage.frame.dlc=8;
-	  txMessage.frame.data0=0x00;
-	  txMessage.frame.data1=0x00;
-	  txMessage.frame.data2=0x00;
-	  txMessage.frame.data3=0x00;
-	  txMessage.frame.data4=0x00;
-	  txMessage.frame.data5=0x00;
-	  txMessage.frame.data6=0x00;
-	  txMessage.frame.data7=0x00;
-	  CANSPI_Transmit(&txMessage);
-	  HAL_Delay(100);
-	  if(CANSPI_Receive(&rxMessage))
-	  {
-		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
-		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
-		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
-		  uint16_t current_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
-
-//		  for(int i=0;i;i++){
-//		  printf("%x",rxMessage.array[i]);
-//		  printf("\r\n");
-//		  HAL_Delay(1000);
-//		  printf("ID:0x%08x DLC:%d \r\n",rxMessage.frame.id,rxMessage.frame.dlc);
-//		  printf("%2x %2x %2x %2x %2x %2x %2x %2x \r\n",rxMessage.frame.data0,rxMessage.frame.data1,rxMessage.frame.data2,rxMessage.frame.data3,rxMessage.frame.data4,rxMessage.frame.data5,rxMessage.frame.data6,rxMessage.frame.data7);
-		  printf("Temp:%d ",temp_buff);
-		  printf("Current:%d ",current_buff);
-		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
-		  printf("Torque:%.2f \r\n",(torque_buff)*0.1);
-
-//
-		 	 		  HAL_Delay(100);
-	  }
+//	  txMessage.frame.id=0x80;//0x81
+//	  txMessage.frame.idType=0x00;
+//	  txMessage.frame.dlc=8;
+//	  txMessage.frame.data0=0x00;
+//	  txMessage.frame.data1=0x00;
+//	  txMessage.frame.data2=0x00;
+//	  txMessage.frame.data3=0x00;
+//	  txMessage.frame.data4=0x00;
+//	  txMessage.frame.data5=0x00;
+//	  txMessage.frame.data6=0x00;
+//	  txMessage.frame.data7=0x00;
+//	  CANSPI_Transmit(&txMessage);
+//	  HAL_Delay(50);
+	  Data_Print(b);
+//	  if(CANSPI_Receive(&rxMessage))
+//	  {
+//		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
+//		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
+//		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
+//		  uint16_t current_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
+//		  printf("Temp:%d ",temp_buff);
+//		  printf("Current:%d ",current_buff);
+//		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
+//		  printf("Torque:%.2f \r\n",(torque_buff)*0.1);
+//	  	  HAL_Delay(50);
+//	  }
     /* USER CODE END WHILE */
-//	  motor.read16bit(0x1803, 0x00, &rpm, DEFAULT_NODE_ID);
-
-//	  HAL_UART_Receive(&huart4,(uint8_t *)rx,sizeof(rx),100);
-//	  printf("%d ",rx);
-//	  HAL_Delay(500);
+//	  unsigned char data[16];
+//	  HAL_UART_Receive_IT(&huart4,a,30);
+//	  HAL_UART_Transmit(&huart2, &a[3], 3, 100);
+	  HAL_Delay(10);
 //
-//	  printf("\r\n");
-    /* USER CODE BEGIN 3 */
+//	  LCD_Print(a);
+//	  HAL_Delay(100);
+
+	  //case 1:
+//	  if(c==0){
+//		  lcd_init();
+//	  lcd_put_cur(0,0);
+//	    lcd_send_string("M.Tq:");
+//	    HAL_Delay(100);
+//	    lcd_put_cur(1,0);
+//	    lcd_send_string("M.Temp:");
+//	  //  lcd_put_cur(0,7);
+//	  //  lcd_send_string((int*)torque_buff);
+//	  //  lcd_put_cur(1,7);
+//	  //  lcd_send_string((int*)temp_buff);
+//	  }
+////
+////	  //case 2:
+//	  else if(c==1){
+//		  lcd_init();
+//		lcd_put_cur(0,0);
+//	    lcd_send_string("B.Volt:");
+//	    HAL_Delay(50);
+//	    lcd_put_cur(1,0);
+//	    lcd_send_string("B.Temp:");
+//	    lcd_put_cur(0,7);
+//	    lcd_send_string((char*)torque_buff);
+//	    lcd_put_cur(1,7);
+//	    lcd_send_string((char*)temp_buff);
+	  }
   }
+
+
+//    /* USER CODE BEGIN 3 */
+
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
   * @retval None
   */
+
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+//	if(GPIO_Pin==GPIO_PIN_7){
+//		HAL_Delay(10);
+//		        if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7)==0)
+//		        {
+//		                printf("this is exti\r\n");
+//		        }
+//		printf("please\r\n");
+//		a+=1;
+//		a%=2;
+//		printf("%d\r\n",a);
+//	}
+//	LCD_Print(a);
+//}
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_7)
+    {
+    	HAL_Delay(20);
+//         printf("please\r\n");
+        if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7)==0)
+        {
+        	lcd_clear();
+        	HAL_Delay(20);
+		 	printf("%d\r\n",a);
+			HAL_Delay(20);
+			a+=1;
+			b+=1;
+			HAL_Delay(20);
+			a%=2;
+			b%=2;
+			LCD_Print(a);
+        }
+    }
+}
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};

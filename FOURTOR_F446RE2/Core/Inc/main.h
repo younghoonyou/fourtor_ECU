@@ -65,12 +65,19 @@ void Error_Handler(void);
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
+#define CLK_Pin GPIO_PIN_4
+#define CLK_GPIO_Port GPIOA
+#define DIO_Pin GPIO_PIN_5
+#define DIO_GPIO_Port GPIOA
 #define CAN_CS_Pin GPIO_PIN_12
 #define CAN_CS_GPIO_Port GPIOB
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define BTN_INT_Pin GPIO_PIN_7
+#define BTN_INT_GPIO_Port GPIOB
+#define BTN_INT_EXTI_IRQn EXTI9_5_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
