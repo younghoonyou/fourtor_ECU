@@ -34,38 +34,23 @@
 #include <stdlib.h>
 #include "i2c-lcd.h"
 #include "stm32_tm1637.h"
-#define SLAVE_ADDRESS_LCD 0x27
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
 I2C_HandleTypeDef hi2c3;
-//MCP_CAN can_bus(12);
-//CANopen motor;
-uint16_t rpm;
-uint8_t len = 0;
-uint32_t canId = 0;
-uint32_t timestamp = 0;
-uint8_t buf[20];
-uint8_t i=0;
-int row=0;
-int col=0;
-uCAN_MSG txMessage;
-uCAN_MSG rxMessage;
-char s[10];
-rx_reg_t rxReg;
-int a=0;
-int b=0;
-//int c=0;
-//int a;
-//float b;
-
+I2C_HandleTypeDef hi2c1;
 /* USER CODE END Includes */
-
+uint16_t rpm;
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+uCAN_MSG txMessage;
+uCAN_MSG rxMessage;
+int row=0;
+int col=0;
 /* USER CODE END PTD */
+uint8_t a[5];
+int RPM_RR;
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 /* USER CODE END PD */
@@ -86,7 +71,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
-uint8_t init_bool = 0;
+
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -96,16 +81,12 @@ uint8_t init_bool = 0;
   * @brief  The application entry point.
   * @retval int
   */
-
 int main(void)
 {
-//	uint8_t a[30];
-//	int size;
-//	int* arr = (int*)malloc(sizeof(int) * size);
   /* USER CODE BEGIN 1 */
+
   /* USER CODE END 1 */
-	uint8_t buffer[100];
-	int str=1000;
+
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -125,170 +106,92 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();//BNO055
-  MX_CAN1_Init();
-  MX_SPI2_Init();//Motor data logging
-  MX_UART4_Init();//BMS data logging
-  MX_UART5_Init();//7-Segment
-  MX_I2C3_Init();//LCD print
+  MX_I2C1_Init();
+  MX_I2C3_Init();
+  MX_SPI2_Init();
+  MX_UART4_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
-
-  CANSPI_Initialize();
+//  CANSPI_Initialize();
   /* USER CODE END 2 */
-
-  /* Infinite loop */
-  lcd_init();
-  HAL_Delay(20);
-  lcd_clear();
+//  lcd_init();
+//  HAL_Delay(20);
+//  lcd_clear();
 //  HAL_Delay(20);
 //  lcd_put_cur(0,0);
 //  HAL_Delay(20);
 //  lcd_send_string((char*)"M.Tq:");
-//  HAL_Delay(20);
-//  lcd_put_cur(1,0);
-//  HAL_Delay(20);
-//  lcd_send_string((char*)"M.Tq:");
-
-
-//  for(int i=0;i<100;i++){
-//	  HAL_Delay(100);
-//	  lcd_put_cur(1,5);
-//	  sprintf((char*)buffer,"%d",i);
-//	  lcd_send_string((char*)buffer);
-//  }
-//  bno055_assignI2C(&hi2c2); //i2c_1이 안되서 2로 바꾸었더니 잘되었다 라이브러리 선언 I2C_HandleTypeDef hi2c2
-//  bno055_setup();
-//  bno055_setOperationMode(BNO055_OPERATION_MODE_ACCGYRO);//작동 모드
-//  bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//파워 모드
-//  lcd_init();
-//  HAL_Delay(30);
-//  lcd_clear();
-//  HAL_Delay(30);
-//  lcd_send_string("B.Temp:");
-//tm1637Init();
-//tm1637SetBrightness(5);
-//for(int i=0;i<1000;i++){
-//tm1637DisplayDecimal(str-i, 1);
-//}
+//    lcd_put_cur(1,0);
+//    HAL_Delay(20);
+//    lcd_send_string((char*)"B.Vol:");
+//  tm1637Init();
+//  tm1637SetBrightness(3);
+  /* Infinite loop */
+  bno055_assignI2C(&hi2c1); //i2c_2이 안되서 1로 바꾸었더니 잘되었다 라이브러리 선언 I2C_HandleTypeDef hi2c2
+   bno055_setup();
+   bno055_setOperationMode(BNO055_OPERATION_MODE_IMU);//작동 모드
+   bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//파워 모드
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-//	  bno055_vector_t gyro = bno055_getVectorGyroscope();// gyro라는 벡터에 각각 x,y,z값의 자이로값
-//	  bno055_vector_t acc = bno055_getVectorAccelerometer();//acc라는 벡터에 각각 x,y,z값의 가속도
-//	  printf("X_gyro: %.2f Y_gyro: %.2f Z_gyro: %.2f\r\n",gyro.x,gyro.y,gyro.z);
-//	  printf("X_acc: %.2f Y_acc: %.2f Z_acc: %.2f\r\n",acc.x,acc.y,acc.z);
-//	  HAL_Delay(1000);
-  /* USER CODE BEGIN WHILE */
-//	  txMessage.frame.id=0x80;//0x81
-//	  txMessage.frame.idType=0x00;
-//	  txMessage.frame.dlc=8;
-//	  txMessage.frame.data0=0x00;
-//	  txMessage.frame.data1=0x00;
-//	  txMessage.frame.data2=0x00;
-//	  txMessage.frame.data3=0x00;
-//	  txMessage.frame.data4=0x00;
-//	  txMessage.frame.data5=0x00;
-//	  txMessage.frame.data6=0x00;
-//	  txMessage.frame.data7=0x00;
-//	  CANSPI_Transmit(&txMessage);
-//	  HAL_Delay(50);
-	  Data_Print(b);
-//	  if(CANSPI_Receive(&rxMessage))
-//	  {
-//		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
-//		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
-//		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
-//		  uint16_t current_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
-//		  printf("Temp:%d ",temp_buff);
-//		  printf("Current:%d ",current_buff);
-//		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
-//		  printf("Torque:%.2f \r\n",(torque_buff)*0.1);
-//	  	  HAL_Delay(50);
-//	  }
+//	  printf("HI \r\n");
     /* USER CODE END WHILE */
-//	  unsigned char data[16];
-//	  HAL_UART_Receive_IT(&huart4,a,30);
-//	  HAL_UART_Transmit(&huart2, &a[3], 3, 100);
-	  HAL_Delay(10);
-//
-//	  LCD_Print(a);
-//	  HAL_Delay(100);
+//	  printf("HI");
+//	  HAL_UART_Receive_IT(&huart4,a,5);
+//	  HAL_UART_Transmit(&huart2, a, 5, 100);
+//	  printf("\r\n");
+//	  lcd_put_cur(1,7);
+//	  HAL_Delay(20);
+//	  lcd_send_string((char*)a);
+//	  HAL_Delay(500);
+//	  bno055_vector_t gyro = bno055_getVectorGyroscope();// gyro라는 벡터에 각각 x,y,z값의 자이로값
+//		  bno055_vector_t acc = bno055_getVectorAccelerometer();//acc라는 벡터에 각각 x,y,z값의 가속도
+		  bno055_vector_t mag = bno055_getVectorEuler();//mag라는 벡터에 각각 x,y,z값의 지자기
 
-	  //case 1:
-//	  if(c==0){
-//		  lcd_init();
-//	  lcd_put_cur(0,0);
-//	    lcd_send_string("M.Tq:");
-//	    HAL_Delay(100);
-//	    lcd_put_cur(1,0);
-//	    lcd_send_string("M.Temp:");
-//	  //  lcd_put_cur(0,7);
-//	  //  lcd_send_string((int*)torque_buff);
-//	  //  lcd_put_cur(1,7);
-//	  //  lcd_send_string((int*)temp_buff);
-//	  }
-////
-////	  //case 2:
-//	  else if(c==1){
-//		  lcd_init();
-//		lcd_put_cur(0,0);
-//	    lcd_send_string("B.Volt:");
-//	    HAL_Delay(50);
-//	    lcd_put_cur(1,0);
-//	    lcd_send_string("B.Temp:");
-//	    lcd_put_cur(0,7);
-//	    lcd_send_string((char*)torque_buff);
-//	    lcd_put_cur(1,7);
-//	    lcd_send_string((char*)temp_buff);
-	  }
+//		  printf("X_gyro: %.2f Y_gyro: %.2f Z_gyro: %.2f\r\n",gyro.x,gyro.y,gyro.z);
+//		  printf("X_acc: %.2f Y_acc: %.2f Z_acc: %.2f\r\n",acc.x,acc.y,acc.z);
+//		  printf("X_mag: %.2f Y_mag: %.2f Z_mag: %.2f\r\n",mag.x,mag.y,mag.z);
+		  printf("%.2f %.2f %.2f\r\n",mag.x,mag.y,mag.z);
+		  	HAL_Delay(100);
+//	  txMessage.frame.id=0x80;//0x81
+//	 	  txMessage.frame.idType=0x00;
+//	 	  txMessage.frame.dlc=8;
+//	 	  txMessage.frame.data0=0x00;
+//	 	  txMessage.frame.data1=0x00;
+//	 	  txMessage.frame.data2=0x00;
+//	 	  txMessage.frame.data3=0x00;
+//	 	  txMessage.frame.data4=0x00;
+//	 	  txMessage.frame.data5=0x00;
+//	 	  txMessage.frame.data6=0x00;
+//	 	  txMessage.frame.data7=0x00;
+//	 	  CANSPI_Transmit(&txMessage);
+//	 	  HAL_Delay(50);
+//	 	  if(CANSPI_Receive(&rxMessage))
+//	 	  {
+//	 		  uint16_t RPM_1= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
+//	 		  uint16_t RPM_2= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
+//	 		  uint32_t RPM=	((uint32_t)RPM_2 << 16) | RPM_1;
+//	 		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
+////	 		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
+////	 		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
+//	 		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
+//	 		  printf("RPM:%d ",RPM);
+//	 		  sprintf(RPM_RR,"%d",RPM);
+//	 		  printf("Temp:%.1f ",temp_buff);
+////	 		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
+//	 		  printf("Torque:%.1f \r\n",(torque_buff)*0.1);
+//	 	  	  HAL_Delay(50);
+//	  tm1637DisplayDecimal(RPM_RR,1);
+//	 	  }
+    /* USER CODE BEGIN 3 */
   }
-
-
-//    /* USER CODE BEGIN 3 */
-
   /* USER CODE END 3 */
-
+}
 
 /**
   * @brief System Clock Configuration
   * @retval None
   */
-
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-//	if(GPIO_Pin==GPIO_PIN_7){
-//		HAL_Delay(10);
-//		        if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7)==0)
-//		        {
-//		                printf("this is exti\r\n");
-//		        }
-//		printf("please\r\n");
-//		a+=1;
-//		a%=2;
-//		printf("%d\r\n",a);
-//	}
-//	LCD_Print(a);
-//}
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if(GPIO_Pin == GPIO_PIN_7)
-    {
-    	HAL_Delay(20);
-//         printf("please\r\n");
-        if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7)==0)
-        {
-        	lcd_clear();
-        	HAL_Delay(20);
-		 	printf("%d\r\n",a);
-			HAL_Delay(20);
-			a+=1;
-			b+=1;
-			HAL_Delay(20);
-			a%=2;
-			b%=2;
-			LCD_Print(a);
-        }
-    }
-}
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -307,11 +210,17 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 180;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Activate the Over-Drive mode
+  */
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
