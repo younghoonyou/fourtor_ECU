@@ -10,7 +10,6 @@
 #include "LTC6811.h"
 #include <stdio.h>
 #include "stdlib.h"
-#include <SoftwareSerial.h>
 /************************* Defines *****************************/
 #define ENABLED 1
 #define DISABLED 0
@@ -19,9 +18,7 @@
 #define DATALOG_DISABLED 0
 #define limit_v 117.6
 /**************** Local Function Declaration *******************/
-SoftwareSerial temp(2,3);
-uint8_t data[30];
-uint8_t send_data[4];
+uint8_t buff[30];
 void measurement_loop(uint8_t datalog_en);
 void print_cells(uint8_t datalog_en);
 void check_error(int error);
@@ -68,6 +65,23 @@ bool DCTOBITS[4] = {false, false, false, true}; //!< Discharge time value // Dct
 /*Ensure that Dcto bits are set according to the required discharge time. Refer to the data sheet */
 
 
+/* 여기는 배터리 온도 인자*/
+int s01 = 6;
+int s11 = 7;
+int s21 = 8;
+int s31 = 9;
+int SIG_pin1 = A0;
+
+int s02 = 2;
+int s12 = 3;
+int s22 = 4;
+int s32 = 5;
+int SIG_pin2 = A1;
+
+float R1 = 10000;
+float logR2, R2, T, Tc, Tf;
+float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.0192026e-07;
+
 void setup()
 { //BMS slave 
   pinMode(8,OUTPUT);
@@ -76,7 +90,6 @@ void setup()
   uint32_t conv_time = 0;
   int8_t s_pin_read=0;
   Serial.begin(9600);
-  temp.begin(9600);
   spi_enable(SPI_CLOCK_DIV16); // This will set the Linduino to have a 1MHz Clock
   LTC6811_init_cfg(TOTAL_IC, BMS_IC);
   for (uint8_t current_ic = 0; current_ic<TOTAL_IC;current_ic++) 
@@ -90,12 +103,12 @@ void setup()
     wakeup_sleep(TOTAL_IC);
       for (uint8_t current_ic = 0; current_ic<TOTAL_IC;current_ic++) 
       {
-        BMS_IC[current_ic].pwm.tx_data[0]= 0xFF; // Duty cycle for S pin 2 and 1
-        BMS_IC[current_ic].pwm.tx_data[1]= 0xFF; // Duty cycle for S pin 4 and 3
-        BMS_IC[current_ic].pwm.tx_data[2]= 0xFF; // Duty cycle for S pin 6 and 5
-        BMS_IC[current_ic].pwm.tx_data[3]= 0xFF; // Duty cycle for S pin 8 and 7
-        BMS_IC[current_ic].pwm.tx_data[4]= 0xFF; // Duty cycle for S pin 10 and 9
-        BMS_IC[current_ic].pwm.tx_data[5]= 0xFF; // Duty cycle for S pin 12 and 11
+        BMS_IC[current_ic].pwm.tx_data[0]= 0x88; // Duty cycle for S pin 2 and 1
+        BMS_IC[current_ic].pwm.tx_data[1]= 0x88; // Duty cycle for S pin 4 and 3
+        BMS_IC[current_ic].pwm.tx_data[2]= 0x88; // Duty cycle for S pin 6 and 5
+        BMS_IC[current_ic].pwm.tx_data[3]= 0x88; // Duty cycle for S pin 8 and 7
+        BMS_IC[current_ic].pwm.tx_data[4]= 0x88; // Duty cycle for S pin 10 and 9
+        BMS_IC[current_ic].pwm.tx_data[5]= 0x88; // Duty cycle for S pin 12 and 11
         LTC6811_wrcfg(TOTAL_IC,BMS_IC);
       }          
       LTC6811_wrpwm(TOTAL_IC,0,BMS_IC);
@@ -128,6 +141,28 @@ void setup()
       wakeup_idle(TOTAL_IC);
       error=LTC6811_rdsctrl(TOTAL_IC,streg,BMS_IC);
 //      check_error(error);
+
+
+/*먹스 초기 설정*/
+  pinMode(s01, OUTPUT);
+  pinMode(s11, OUTPUT);
+  pinMode(s21, OUTPUT);
+  pinMode(s31, OUTPUT);
+
+  pinMode(s02, OUTPUT);
+  pinMode(s12, OUTPUT);
+  pinMode(s22, OUTPUT);
+  pinMode(s32, OUTPUT);
+  digitalWrite(s01,LOW);
+  digitalWrite(s11,LOW);
+  digitalWrite(s21,LOW);
+  digitalWrite(s31,LOW);
+
+  digitalWrite(s02,LOW);
+  digitalWrite(s12,LOW);
+  digitalWrite(s22,LOW);
+  digitalWrite(s32,LOW);
+
   
 }
 
@@ -165,18 +200,19 @@ void measurement_loop(uint8_t datalog_en)
       }
     if (MEASURE_CELL == ENABLED)
     {
-      LTC6811_set_cfgr_dis(TOTAL_IC,BMS_IC,DCCBITS_A);
+      //////////////LTC6811_set_cfgr_dis(TOTAL_IC,BMS_IC,DCCBITS_A);
       wakeup_idle(TOTAL_IC);
       LTC6811_adcv(ADC_CONVERSION_MODE,ADC_DCP,CELL_CH_TO_CONVERT);
       LTC6811_pollAdc();
       wakeup_idle(TOTAL_IC);
       error = LTC6811_rdcv(SEL_ALL_REG, TOTAL_IC,BMS_IC);
 //      check_error(error);
+      print_temp(datalog_en);
       print_cells(datalog_en);
-      
     }
     delay(MEASUREMENT_LOOP_TIME);
 
+    
   }
 }
 
@@ -196,35 +232,44 @@ void print_cells(uint8_t datalog_en)
 {
   float percent_of_volt=0;
   int real_vol=0;
-  double mini=99,maxi=-99;
   uint8_t temp_max = 0,temp_min = 0;
-  temp.readBytes(data,30);
-//  for(int i=0;i<30;++i){
-//     Serial.println(data[i]);
-//  }
-double total_v=0;
+  double total_v=0;
+  double maxi=-99,mini=99;
   for (int current_ic = 0 ; current_ic < TOTAL_IC; current_ic++){
+//    double total_v=0;
+    Serial.print("["); //입증용
+    Serial.print(current_ic+1);  //입증용
+    Serial.print("]");  //입증용
+    Serial.print(":");  //입증용
     if (datalog_en == 0){
 
     }
     else{
+//      double total_v=0;
       for (int i=0; i<BMS_IC[0].ic_reg.cell_channels; i++){
         total_v +=(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001);
         maxi = max(maxi,(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001));
-        mini = min(mini,(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001));
+        mini = max(mini,(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001));
+        Serial.print("["); //입증용
+        Serial.print((double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001)); //입증용
+        Serial.print("]");  //입증용
       }
+    Serial.print("["); //입증용
+        Serial.print(total_v); //입증용
+        Serial.print("]");  //입증용       
     }
+    Serial.print("["); //입증용
+        Serial.print(total_v); //입증용
+        Serial.print("]");  //입증용
+    Serial.println();//입증용
+    Serial.println();//입증용
   }
-Serial.println(total_v);
-real_vol = (total_v)*10;
-//Serial.println(real_vol);
-temp_max = data[0]-20;
-temp_min = data[1]-20;
-send_data[0] = data[0];
-send_data[1] = data[1];
-send_data[2] = real_vol/10;
-send_data[3] = real_vol%10;
-Serial.write(send_data,4);
+//real_vol = (total_v)*10;
+temp_max = buff[0];
+temp_min = buff[1];
+buff[2] = real_vol/10;
+buff[3] = real_vol%10;
+//Serial.write(buff,4);
 if(maxi>4.2||mini<2.8||temp_max>60||temp_min<-20){
   digitalWrite(8,LOW);
 }
@@ -237,6 +282,118 @@ void check_error(int error)
 {
   if (error == -1)
   {
-    Serial.println(F("A PEC error was detected in the received data"));
+//    Serial.println(F("A PEC error was detected in the received data"));
   }
+}
+/*온도 소자 먹스*/
+void print_temp(uint8_t datalog_en){
+  int maxT1 = -99;
+  int minT1 = 99;
+  int maxT2 = -99;
+  int minT2 = 99;
+  if(datalog_en == 0){
+    
+  }
+  else{
+    for(int i=0; i<14; i++){
+    Serial.print("[");//입증용
+    Serial.print("Mux1");//입증용
+    Serial.print("]");//입증용
+    Serial.print(":");//입증용
+    Serial.print(readMux1(i));//입증용
+    Serial.print(" ");//입증용
+    maxT1 = max(maxT1,readMux1(i));
+    minT1 = max(minT1,readMux1(i));
+    }
+//    Serial.println();//입증용
+    for(int i=0; i<14; i++){
+      Serial.print("[");//입증용
+    Serial.print("Mux2");//입증용
+    Serial.print("]");//입증용
+    Serial.print(":");//입증용
+    Serial.print(readMux2(i));//입증용
+    Serial.print(" ");//입증용
+    maxT2 = max(maxT2,readMux2(i));
+    minT2 = max(minT2,readMux2(i));
+    }
+    Serial.println();//입증용
+    Serial.println();//입증용
+  }
+    int real_max = max(maxT1,maxT2);
+    int real_min = min(minT1,minT2);
+    buff[0] = real_max + 20;
+    buff[1] = real_min + 20;
+    delay(500);
+}
+
+
+
+int readMux1(int channel){
+  int controlPin[] = {s01,s11,s21,s31};
+  int muxChannel[14][4] = 
+  {
+    {0,0,0,0}, //channel 0
+    {1,0,0,0}, //channel 1
+    {0,1,0,0}, //channel 2
+    {1,1,0,0}, //channel 3
+    {0,0,1,0}, //channel 4
+    {1,0,1,0}, //channel 5
+    {0,1,1,0}, //channel 6 no use
+    
+    {1,0,0,1}, //channel 9
+    {0,1,0,1}, //channel 10
+    {1,1,0,1}, //channel 11
+    {0,0,1,1}, //channel 12
+    {1,0,1,1}, //channel 13
+    {0,1,1,1}, //channel 14
+    {1,1,1,1}  //channel 15
+      };
+ 
+  for(int i =0; i<4; i++){
+    digitalWrite(controlPin[i],muxChannel[channel][i]);
+      
+  }
+  int  Vo = analogRead(SIG_pin1);
+  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  Tc = T - 273.15;
+  Tf = (Tc * 9.0)/5.0 + 32.0;
+  return Tc;
+ 
+}
+
+int readMux2(int channel){
+  int controlPin[] = {s02,s12,s22,s32};
+  int muxChannel[14][4] = 
+  {
+    {0,0,0,0}, //channel 0
+    {1,0,0,0}, //channel 1
+    {0,1,0,0}, //channel 2
+    {1,1,0,0}, //channel 3
+    {0,0,1,0}, //channel 4
+    {1,0,1,0}, //channel 5
+    {0,1,1,0}, //channel 6 no use
+    
+    {1,0,0,1}, //channel 9
+    {0,1,0,1}, //channel 10
+    {1,1,0,1}, //channel 11
+    {0,0,1,1}, //channel 12
+    {1,0,1,1}, //channel 13
+    {0,1,1,1}, //channel 14
+    {1,1,1,1}  //channel 15
+      };
+ 
+  for(int i =0; i<4; i++){
+    digitalWrite(controlPin[i],muxChannel[channel][i]);
+      
+  }
+  int  Vo = analogRead(SIG_pin2);
+  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  Tc = T - 273.15;
+  Tf = (Tc * 9.0)/5.0 + 32.0;
+  return Tc;
+ 
 }
