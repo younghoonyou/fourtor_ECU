@@ -16,43 +16,61 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
-#include "main.h"
-#include "i2c.h"
-#include "spi.h"
-#include "usart.h"
-#include "gpio.h"
 #include "stdio.h"
 #include "stm32f4xx_hal.h"
 #include "stdio.h"
 #include "bno055.h"
-#include "bno055_stm32.h"
 #include "string.h"
 #include "CANSPI.h"
 #include "MCP2515.h"
 #include <stdlib.h>
 #include "i2c-lcd.h"
 #include "stm32_tm1637.h"
+#include "MY_NRF24.h"
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "i2c.h"
+#include "spi.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart6;
 UART_HandleTypeDef huart2;
 I2C_HandleTypeDef hi2c3;
+I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef hi2c1;
+SPI_HandleTypeDef hspi3;
+TIM_HandleTypeDef htim1;
 /* USER CODE END Includes */
-uint16_t rpm;
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+uint8_t receive_data[7];
+
+const uint64_t TxpipeAddrs = 0xE8E8F0F0E1LL; // RF pipe to send
+struct {
+	int rpm;//for Motor Data
+	float imu_x,imu_y,imu_z,motor_torq;//for IMU and Motor Data
+	uint8_t B_vol_int,B_vol_div,temp1,temp2,temp3,temp4,temp_max,motor_temp;//for telemetry
+}mxTxData;//To send data
+char AckPayload[32];
+char string_voltage[6];
+char string_temperature[6];
+char RPM_RR[10];
 uCAN_MSG txMessage;
 uCAN_MSG rxMessage;
 int row=0;
 int col=0;
 /* USER CODE END PTD */
-uint8_t a[5];
-int RPM_RR;
+
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -111,80 +129,165 @@ int main(void)
   MX_SPI2_Init();
   MX_UART4_Init();
   MX_UART5_Init();
+  MX_SPI3_Init();
+  MX_I2C2_Init();
+  MX_USART6_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-//  CANSPI_Initialize();
+
   /* USER CODE END 2 */
-//  lcd_init();
-//  HAL_Delay(20);
-//  lcd_clear();
-//  HAL_Delay(20);
-//  lcd_put_cur(0,0);
-//  HAL_Delay(20);
-//  lcd_send_string((char*)"M.Tq:");
-//    lcd_put_cur(1,0);
-//    HAL_Delay(20);
-//    lcd_send_string((char*)"B.Vol:");
-//  tm1637Init();
-//  tm1637SetBrightness(3);
+
   /* Infinite loop */
-  bno055_assignI2C(&hi2c1); //i2c_2이 안되서 1로 바꾸었더니 잘되었다 라이브러리 선언 I2C_HandleTypeDef hi2c2
-   bno055_setup();
-   bno055_setOperationMode(BNO055_OPERATION_MODE_IMU);//작동 모드
-   bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//파워 모드
+  /* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  enum notes {// For RTDS ready to drive sound
+      C4 = 26162,
+      D4 = 29366,
+      E4 = 32962,
+      F4 = 34922,
+      G4 = 39199,
+	  B4 = 49388,
+	  bE4 = 31112,
+	  bA4 = 41530,
+	  bB4 = 46616,
+      C5 = 52325,
+	  B5 = 98776,
+	  D5 = 58733,
+	  bE5 = 62225,
+	  E5 = 65925,
+	  F5 = 69845,
+	  G5 = 78399,
+	  bA5 = 83060,
+	  bB5 = 93232,
+    };
+  enum notes A[] = {C4,D4,E4,F4,G4,C5,D5,E5,F5,G5};// To play music
+
+  while(1){// For start buzzer
+	GPIO_PinState pin_state= HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_9);
+	if(pin_state==GPIO_PIN_SET){
+		HAL_Delay(200);
+		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+		int PCLK1_Freq = HAL_RCC_GetPCLK2Freq();//initial PCLK
+		__HAL_TIM_SET_PRESCALER(&htim1,899);//Set to prescaler
+		int size = sizeof(A/sizeof(enum notes));
+		for (int i = 0 ; i < size ; i++) {
+		      __HAL_TIM_SET_AUTORELOAD(&htim1, PCLK1_Freq / A[i]*0.1 );
+		      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, PCLK1_Freq / A[i]*0.1 / 2);
+		      HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+		      HAL_Delay(500);
+		      HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+		      if(i==size - 1) HAL_Delay(750); // if music is done
+		    }
+		HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+		break;
+	}
+	HAL_Delay(1000);
+}
+  //------------------------------------ **** TRANSMIT - ACK ****------------------------------------//
+	nrf24_DebugUART_Init(huart2);
+    NRF24_begin(GPIOB, GPIO_PIN_6, GPIO_PIN_4, hspi3);
+
+    NRF24_setPALevel(RF24_PA_0dB);
+  	NRF24_setAutoAck(false);
+  	NRF24_setChannel(80);
+  	NRF24_setPayloadSize(28);
+  	NRF24_setDataRate(RF24_2MBPS);
+  	NRF24_openWritingPipe(TxpipeAddrs);
+  	NRF24_stopListening();
+
+  	//------------------------------------ **** MCP2515 Setting ****------------------------------------//
+    CANSPI_Initialize();
+	//------------------------------------ **** LCD Setting ****------------------------------------//
+    lcd_init();
+	lcd_clear();
+  	HAL_Delay(20);
+  	lcd_put_cur(0,0);
+  	HAL_Delay(20);
+  	lcd_send_string((char*)"B.Temp:");
+  	lcd_put_cur(1,0);
+  	HAL_Delay(20);
+  	lcd_send_string((char*)"B.Vol:");
+  	//------------------------------------ **** Segment Setting ****------------------------------------//
+  	tm1637Init();
+  	tm1637SetBrightness(3);
+  	//------------------------------------ **** IMU Setting ****------------------------------------//
+  	bno055_calibration_data_t calData;
+  	bno055_assignI2C(&hi2c1);
+  	bno055_setup();
+	bno055_setCalibrationData(calData);//Set init
+  	bno055_setOperationMode(BNO055_OPERATION_MODE_IMU);//작동 모드
+  	bno055_setPowerMode(BNO55_POWER_MODE_LOWPOWER);//파워 모드
+  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  printf("HI \r\n");
-    /* USER CODE END WHILE */
-//	  printf("HI");
-//	  HAL_UART_Receive_IT(&huart4,a,5);
-//	  HAL_UART_Transmit(&huart2, a, 5, 100);
-//	  printf("\r\n");
-//	  lcd_put_cur(1,7);
-//	  HAL_Delay(20);
-//	  lcd_send_string((char*)a);
-//	  HAL_Delay(500);
-//	  bno055_vector_t gyro = bno055_getVectorGyroscope();// gyro라는 벡터에 각각 x,y,z값의 자이로값
-//		  bno055_vector_t acc = bno055_getVectorAccelerometer();//acc라는 벡터에 각각 x,y,z값의 가속도
-		  bno055_vector_t mag = bno055_getVectorEuler();//mag라는 벡터에 각각 x,y,z값의 지자기
+	  //recieve_data : Highest Temperature , Voltage Int, Voltage float , 1~4 segment Temperature Data
+	  HAL_UART_Receive(&huart4,receive_data,4,200);// Read Voltage and Celus temperature Data
+	  sprintf(string_voltage,"%d.%dV",receive_data[1],receive_data[2]);//Make String Voltage Data
+	  sprintf(string_temperature,"%d'C",receive_data[0]);//Make String temperature Data
+	  lcd_put_cur(0,7);//Move Cursor
+	  HAL_Delay(50);
+	  lcd_send_string((char*)string_temperature); // Battery Temperature
+	  lcd_put_cur(1,7);//Move Cursor
+	  HAL_Delay(50);
+	  lcd_send_string((char*)string_voltage); // Battery Voltage
+	  	//------------------------------------ **** IMU ****------------------------------------//
+	  	  	  bno055_vector_t gyro = bno055_getVectorGyroscope();// gyro vector for x,y,z gryoscope
+	  		  bno055_vector_t acc = bno055_getVectorAccelerometer();//acc vector for x,y,z accelerometer
+//	  		//------------------------------------ **** CAN_Motor ****------------------------------------//
+	  		  HAL_Delay(200);
+	  		  txMessage.frame.id=0x80;// To Listen Motor PDO data
+	  	 	  txMessage.frame.idType=0x00;
+	  	 	  txMessage.frame.dlc=8;// Data length
+	  	 	  txMessage.frame.data0=0x00;// To get PDO data
+	  	 	  txMessage.frame.data1=0x00;
+	  	 	  txMessage.frame.data2=0x00;
+	  	 	  txMessage.frame.data3=0x00;
+	  	 	  txMessage.frame.data4=0x00;
+	  	 	  txMessage.frame.data5=0x00;
+	  	 	  txMessage.frame.data6=0x00;
+	  	 	  txMessage.frame.data7=0x00;
+	  	 	  CANSPI_Transmit(&txMessage);// Send Tx Message to get PDO data
+	  	 	  HAL_Delay(200);
+	  	 	  if(CANSPI_Receive(&rxMessage))// If Message sent well
+	  	 	  {
+	  	 		  uint16_t RPM_1= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
+	  	 		  uint16_t RPM_2= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
+	  	 		  int RPM=	((int)RPM_2 << 16) | RPM_1; // Motor RPM data 4bytes
+	  	 		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;// Motor Torque data 2bytes
+	  	 		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;// Motor Temperature 2bytes
+	  	 		  sprintf(RPM_RR,"%d",RPM);
+	  	 	  	  HAL_Delay(50);
+	  	 	 }
+	  	//------------------------------------ **** 7Segment ****------------------------------------//
 
-//		  printf("X_gyro: %.2f Y_gyro: %.2f Z_gyro: %.2f\r\n",gyro.x,gyro.y,gyro.z);
-//		  printf("X_acc: %.2f Y_acc: %.2f Z_acc: %.2f\r\n",acc.x,acc.y,acc.z);
-//		  printf("X_mag: %.2f Y_mag: %.2f Z_mag: %.2f\r\n",mag.x,mag.y,mag.z);
-		  printf("%.2f %.2f %.2f\r\n",mag.x,mag.y,mag.z);
-		  	HAL_Delay(100);
-//	  txMessage.frame.id=0x80;//0x81
-//	 	  txMessage.frame.idType=0x00;
-//	 	  txMessage.frame.dlc=8;
-//	 	  txMessage.frame.data0=0x00;
-//	 	  txMessage.frame.data1=0x00;
-//	 	  txMessage.frame.data2=0x00;
-//	 	  txMessage.frame.data3=0x00;
-//	 	  txMessage.frame.data4=0x00;
-//	 	  txMessage.frame.data5=0x00;
-//	 	  txMessage.frame.data6=0x00;
-//	 	  txMessage.frame.data7=0x00;
-//	 	  CANSPI_Transmit(&txMessage);
-//	 	  HAL_Delay(50);
-//	 	  if(CANSPI_Receive(&rxMessage))
-//	 	  {
-//	 		  uint16_t RPM_1= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
-//	 		  uint16_t RPM_2= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
-//	 		  uint32_t RPM=	((uint32_t)RPM_2 << 16) | RPM_1;
-//	 		  uint16_t torque_buff= ((uint16_t)rxMessage.frame.data5 << 8) | rxMessage.frame.data4;
-////	 		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data1 << 8) | rxMessage.frame.data0;
-////	 		  uint16_t vol_buff= ((uint16_t)rxMessage.frame.data3 << 8) | rxMessage.frame.data2;
-//	 		  uint16_t temp_buff= ((uint16_t)rxMessage.frame.data7 << 8) | rxMessage.frame.data6;
-//	 		  printf("RPM:%d ",RPM);
-//	 		  sprintf(RPM_RR,"%d",RPM);
-//	 		  printf("Temp:%.1f ",temp_buff);
-////	 		  printf("Voltage:%.2f ",(vol_buff)*0.0625);
-//	 		  printf("Torque:%.1f \r\n",(torque_buff)*0.1);
-//	 	  	  HAL_Delay(50);
-//	  tm1637DisplayDecimal(RPM_RR,1);
-//	 	  }
-    /* USER CODE BEGIN 3 */
+	  	 		  tm1637DisplayDecimal(RPM_RR,1);//Display 7-segment for motor data
+
+	  	//------------------------------------ **** RF_Trans ****------------------------------------//
+	  	 	mxTxData.rpm = RPM;
+
+	  	 	mxTxData.imu_x=acc.x;
+			mxTxData.imu_y=acc.x;
+			mxTxData.imu_z=acc.z;
+
+			mxTxData.motor_temp = temp_buff;
+			mxTxData.motor_torq = torque_buff * 0.1;
+
+			mxTxData.B_vol_div = receive_data[2];
+			mxTxData.B_vol_int = receive_data[1];
+			mxTxData.temp_max= receive_data[0];
+			mxTxData.temp1= receive_data[3];
+			mxTxData.temp2= receive_data[4];
+			mxTxData.temp3= receive_data[5];
+			mxTxData.temp4= receive_data[6];
+	  if(NRF24_write(txPackage, 28)){// Total Data is 28 bytes and if that goes well
+		HAL_UART_Transmit(&huart2, (uint8_t *)"Transmitted Successfully\r\n", strlen("Transmitted Successfully\r\n"), 10);
+	  }
+	  		  HAL_Delay(100);
   }
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */
 }
 
@@ -237,6 +340,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+//}
 }
 
 /* USER CODE BEGIN 4 */

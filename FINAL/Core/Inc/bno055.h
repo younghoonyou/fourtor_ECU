@@ -226,10 +226,10 @@ typedef struct {
 } bno055_calibration_data_t;
 
 typedef struct {
-  double w;
-  double x;
-  double y;
-  double z;
+  float w;
+  float x;
+  float y;
+  float z;
 } bno055_vector_t;
 
 typedef struct {

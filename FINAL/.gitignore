@@ -1,1 +1,10 @@
 /Debug/
+/Drivers/
+/Startup/
+*.ld
+*.launch
+*.settings
+.vscode/
+.cproject
+.mxproject
+.project

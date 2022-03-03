@@ -67,10 +67,18 @@ void Error_Handler(void);
 #define USART_RX_GPIO_Port GPIOA
 #define CAN_CS_Pin GPIO_PIN_12
 #define CAN_CS_GPIO_Port GPIOB
+#define RTD_IN_Pin GPIO_PIN_9
+#define RTD_IN_GPIO_Port GPIOA
+#define RTD_OUT_Pin GPIO_PIN_12
+#define RTD_OUT_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define RF_CS_Pin GPIO_PIN_4
+#define RF_CS_GPIO_Port GPIOB
+#define RF_CSN_Pin GPIO_PIN_6
+#define RF_CSN_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

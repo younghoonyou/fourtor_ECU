@@ -2,25 +2,26 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <string.h>
-RF24 radio(9, 6); // SPI 버스에 nRF24L01 라디오를 설정하기 위해 CE, CSN 선언.
+RF24 radio(9, 6); // in SPI bus to set nRF24L01 radio 
 
-const uint64_t address = 0xE8E8F0F0E1LL;
+const uint64_t address = 0xE8E8F0F0E1LL;// Pipeline
 struct data{
   int RPM;
   float imu_x,imu_y,imu_z,motor_torq;
   uint8_t B_vol_int,B_vol_div,temp1,temp2,temp3,temp4,temp_max,motor_temp;
-};
+};//Data struct
 void setup() {
   Serial.begin(9600);
   radio.begin();
-  radio.setPALevel(RF24_PA_MAX); //전원공급에 관한 파워레벨을 설정합니다. 모듈 사이가 가까우면 최소로 설정합니다.
+  radio.setPALevel(RF24_PA_MAX); // To set about voltage level. If module is close you should set at least
+
   radio.setAutoAck(false);
-  radio.openReadingPipe(1,address);
-//거리가 가까운 순으로 RF24_PA_MIN / RF24_PA_LOW / RF24_PA_HIGH / RF24_PA_MAX 등으로 설정할 수 있습니다.
-//높은 레벨(거리가 먼 경우)은 작동하는 동안 안정적인 전압을 가지도록 GND와 3.3V에 바이패스 커패시터 사용을 권장함
-  radio.startListening(); //모듈을 수신기로 설정
+  radio.openReadingPipe(1,address);//you can set RF24_PA_MIN / RF24_PA_LOW / RF24_PA_HIGH / RF24_PA_MAX
+  //for your module distance
+  //For MAX level to operate you should use by-pass capacitor between 3.3V and GND
+  radio.startListening(); //Setting Module to Listener
 }
-void loop() {
+void loop() {//Read ECU Data and print to use Node.js
   if (radio.available()){ 
   radio.read(data,28);
   Serial.print(data.RPM);

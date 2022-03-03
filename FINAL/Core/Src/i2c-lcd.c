@@ -40,6 +40,14 @@ void lcd_clear (void)
 		lcd_send_data(' ');
 	}
 }
+void lcd_clear_want (int row,int col)
+{
+	lcd_put_cur(row,col);
+	for (int i=0; i<2; i++)
+	{
+		lcd_send_data(' ');
+	}
+}
 
 void lcd_put_cur(int row, int col)
 {

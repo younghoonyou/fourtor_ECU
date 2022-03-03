@@ -17,6 +17,8 @@ void lcd_put_cur(int row, int col);  // put cursor at the entered position row (
 
 void lcd_clear (void);
 
+void lcd_clear_want (int row,int col);
+
 void LCD_Print(int num);
 
 void Data_Print(int num);

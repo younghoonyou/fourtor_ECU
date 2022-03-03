@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "bno055_stm32.h": "c",
+        "bno055.h": "c",
+        "nrf24l01.h": "c",
+        "my_nrf24.h": "c",
+        "canspi.h": "c",
+        "mcp2515.h": "c"
+    }
+}
