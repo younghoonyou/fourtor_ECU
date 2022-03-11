@@ -19,17 +19,23 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 
 > # <div align="center">Motor</div>
 <br>
+<div align="center">
 <img src="https://user-images.githubusercontent.com/69233428/157976276-942bd076-78d8-4ae8-95f3-8e5bfd1adcaf.png">
 <img src="https://user-images.githubusercontent.com/69233428/157976546-60a616b9-da1b-47eb-ae3a-d8178f8ef23d.png">
+  </div>
 
 #### Using Sevcon Gen4 controller read Motor's data including Torque,RPM,Motor's temperature
-> # <div align="center">Battery</div>
+> # <div align="center">Battery
 <br>
-
-<img src="https://user-images.githubusercontent.com/69233428/157974028-46d2b951-8916-4dd5-b83e-055f85612c95.png" width="300" height="530">
-<img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="300" height="530">
-<img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="300" height="530">
+<p>
+<img src="https://user-images.githubusercontent.com/69233428/157974028-46d2b951-8916-4dd5-b83e-055f85612c95.png" width="330" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="330" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="330" height="530">
+  <div align="center">
 <img src="https://user-images.githubusercontent.com/69233428/157975280-87a346ab-42f9-428b-8101-00b6e5161c36.gif">
+    </div>
+  </p>
+  </div>
                                                                                                                  
 #### From Battery and BMS logging battery's cell voltage and temperature
 > # <div align="center">Driver</div>
