@@ -28,9 +28,9 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 > # <div align="center">Battery
 <br>
 <p>
-<img src="https://user-images.githubusercontent.com/69233428/157974028-46d2b951-8916-4dd5-b83e-055f85612c95.png" width="330" height="530">
-<img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="330" height="530">
-<img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="330" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/157974028-46d2b951-8916-4dd5-b83e-055f85612c95.png" width="350" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="350" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="350" height="530">
   <div align="center">
 <img src="https://user-images.githubusercontent.com/69233428/157975280-87a346ab-42f9-428b-8101-00b6e5161c36.gif">
     </div>
