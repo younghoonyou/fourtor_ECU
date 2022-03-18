@@ -32,7 +32,7 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 <img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="350" height="530">
 <img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="350" height="530">
   <div align="center">
-<img src="https://user-images.githubusercontent.com/69233428/157975280-87a346ab-42f9-428b-8101-00b6e5161c36.gif">
+<img src="https://user-images.githubusercontent.com/69233428/158955308-0afc8496-db80-4027-9059-7c09b3bde3c7.gif">
     </div>
   </p>
   </div>
@@ -42,9 +42,13 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 <br>
 <div align="center">
 <img src="https://user-images.githubusercontent.com/69233428/157978207-5ae008dd-cc52-4201-820f-6d18599b8dc6.png" widh="900" height="700">
+<img src="https://user-images.githubusercontent.com/69233428/158955463-b59c45a6-f4a8-4484-b206-86f774be9d87.gif">
   </div>
 
 #### Driver can view vehicle Data through LCD1602 and 7-segment
+
+#### If Battery Temperature or Voltage got an Error SDC(ShutDown Circuit) Signal get High (I replace with LED)
+
 > # <div align="center">Telemetry</div>
 <br>
 
