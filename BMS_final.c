@@ -172,7 +172,7 @@ void setup()
 ***********************************************************************/
 void loop()
 {
-   wakeup_sleep(TOTAL_IC); // 절전 모드 
+   wakeup_sleep(TOTAL_IC); // 
    LTC6811_wrcfg(TOTAL_IC,BMS_IC);
    measurement_loop(DATALOG_ENABLED);
 }
@@ -187,7 +187,6 @@ void measurement_loop(uint8_t datalog_en)
     for (uint8_t current_ic =0 ; current_ic < TOTAL_IC; current_ic++){
     if(BMS_IC[current_ic].stat.flags[0]==0xAA){
       digitalWrite(10,LOW);
-//      Serial.println("good!");
       }
     else
     {
@@ -237,10 +236,6 @@ void print_cells(uint8_t datalog_en)
   double maxi=-99,mini=99;
   for (int current_ic = 0 ; current_ic < TOTAL_IC; current_ic++){
 //    double total_v=0;
-    Serial.print("["); //입증용
-    Serial.print(current_ic+1);  //입증용
-    Serial.print("]");  //입증용
-    Serial.print(":");  //입증용
     if (datalog_en == 0){
 
     }
@@ -250,19 +245,8 @@ void print_cells(uint8_t datalog_en)
         total_v +=(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001);
         maxi = max(maxi,(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001));
         mini = max(mini,(double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001));
-        Serial.print("["); //입증용
-        Serial.print((double)(BMS_IC[current_ic].cells.c_codes[i] * 0.0001)); //입증용
-        Serial.print("]");  //입증용
       }
-    Serial.print("["); //입증용
-        Serial.print(total_v); //입증용
-        Serial.print("]");  //입증용       
     }
-    Serial.print("["); //입증용
-        Serial.print(total_v); //입증용
-        Serial.print("]");  //입증용
-    Serial.println();//입증용
-    Serial.println();//입증용
   }
 //real_vol = (total_v)*10;
 temp_max = buff[0];
@@ -296,28 +280,13 @@ void print_temp(uint8_t datalog_en){
   }
   else{
     for(int i=0; i<14; i++){
-    Serial.print("[");//입증용
-    Serial.print("Mux1");//입증용
-    Serial.print("]");//입증용
-    Serial.print(":");//입증용
-    Serial.print(readMux1(i));//입증용
-    Serial.print(" ");//입증용
     maxT1 = max(maxT1,readMux1(i));
     minT1 = max(minT1,readMux1(i));
     }
-//    Serial.println();//입증용
     for(int i=0; i<14; i++){
-      Serial.print("[");//입증용
-    Serial.print("Mux2");//입증용
-    Serial.print("]");//입증용
-    Serial.print(":");//입증용
-    Serial.print(readMux2(i));//입증용
-    Serial.print(" ");//입증용
     maxT2 = max(maxT2,readMux2(i));
     minT2 = max(minT2,readMux2(i));
     }
-    Serial.println();//입증용
-    Serial.println();//입증용
   }
     int real_max = max(maxT1,maxT2);
     int real_min = min(minT1,minT2);
