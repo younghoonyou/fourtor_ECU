@@ -24,7 +24,7 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 <img src="https://user-images.githubusercontent.com/69233428/157976546-60a616b9-da1b-47eb-ae3a-d8178f8ef23d.png">
   </div>
 
-#### Using Sevcon Gen4 controller read Motor's data including Torque,RPM,Motor's temperature
+#### Using Sevcon Gen4 controller read Motor's data including Torque,RPM,Motor's temperature with CANOpen interface
 > # <div align="center">Battery
 <br>
 <p>
@@ -45,7 +45,7 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 <img src="https://user-images.githubusercontent.com/69233428/158955463-b59c45a6-f4a8-4484-b206-86f774be9d87.gif">
   </div>
 
-#### Driver can view vehicle Data through LCD1602 and 7-segment
+#### Driver can view vehicle Data through LCD1602 and 7-segment with SPI and I2C interface
 
 #### If Battery Temperature or Voltage got an Error SDC(ShutDown Circuit) Signal get High (I replace with LED)
 
