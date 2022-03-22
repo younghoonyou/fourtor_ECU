@@ -3,7 +3,8 @@
 Hanyang Univ. ERICA Campus
 
 https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb3294aa7ba8c90
-<br>For more detail go to above link
+<br>For more detail go to above link <br>
+### Contributor : [Oh](https://github.com/HAMA-DL-dev)
 <div align="center">
   
 # Tech Stack
@@ -31,6 +32,7 @@ https://www.notion.so/hoonworkspace/Electronic-Car-for-ECU-f8a141c54b9c46c8afb32
 <img src="https://user-images.githubusercontent.com/69233428/157974028-46d2b951-8916-4dd5-b83e-055f85612c95.png" width="350" height="530">
 <img src="https://user-images.githubusercontent.com/69233428/157974034-11da9c7a-4d50-4325-8956-6ff793e6545a.png" width="350" height="530">
 <img src="https://user-images.githubusercontent.com/69233428/157977477-ea5622ba-3361-450b-b9c2-406e5aaef4ff.jpg" width="350" height="530">
+<img src="https://user-images.githubusercontent.com/69233428/159430773-177d9bf9-a6c2-4841-b9e9-13118454c750.png" width="350" height="530">
   <div align="center">
 <img src="https://user-images.githubusercontent.com/69233428/158955308-0afc8496-db80-4027-9059-7c09b3bde3c7.gif">
     </div>
